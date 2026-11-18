@@ -11,7 +11,7 @@ import (
 )
 
 type setValueIn struct {
-	PointID     string `json:"point_id" jsonschema:"writable data point id (get_sensor shows writable: true)"`
+	PointID     string `json:"point_id" jsonschema:"id of a writable data point"`
 	Value       string `json:"value" jsonschema:"new value as text: true or false (also on/off) for switches, a number like 21.5, or an option text"`
 	WaitSeconds int    `json:"wait_seconds,omitempty" jsonschema:"wait up to this many seconds (max 20) for the device to confirm"`
 }
@@ -24,32 +24,32 @@ type commandIn struct {
 }
 
 type logValueIn struct {
-	PointID string `json:"point_id" jsonschema:"manual data point id (get_sensor shows manual: true)"`
+	PointID string `json:"point_id" jsonschema:"id of a manual data point"`
 	Value   string `json:"value" jsonschema:"measured value as text, e.g. 6.8 (true/false or an option text for switch or choice points)"`
 	At      string `json:"at,omitempty" jsonschema:"when it was measured: ISO time (default now)"`
 }
 
 type markIn struct {
-	MessageIDs []string `json:"message_ids,omitempty" jsonschema:"one message id from list_messages (one per call)"`
+	MessageIDs []string `json:"message_ids,omitempty" jsonschema:"one message id (one per call)"`
 	All        bool     `json:"all,omitempty" jsonschema:"mark every message as read (action must be read)"`
 	Action     string   `json:"action" jsonschema:"read, unread, archive or restore"`
 }
 
 type toggleIn struct {
-	AutomationID string `json:"automation_id" jsonschema:"automation id from list_automations"`
+	AutomationID string `json:"automation_id" jsonschema:"automation id"`
 	Enabled      bool   `json:"enabled" jsonschema:"true to switch on, false to switch off"`
 }
 
 type createIn struct {
 	Definition map[string]any `json:"definition" jsonschema:"automation as for POST /api/automations/v1: name, triggerType (THRESHOLD on readings, ANOMALY, OFFLINE; required), sensorId, conditions (measurementType or dataPointId, comparison ABOVE/BELOW/IS_ON/EQUALS/CHANGED, threshold, hysteresis), match ALL/ANY, holdSeconds, schedule, actions (NOTIFICATION, NOTIFY_CHANNEL with channelId, WRITE_DATA_POINT with dataPointId and value, COMMAND_TEMPLATE). WEBHOOK is not allowed."`
-	DryRun     *bool          `json:"dry_run,omitempty" jsonschema:"default true: only check and preview. Set false to create after the user agreed."`
+	DryRun     *bool          `json:"dry_run,omitempty" jsonschema:"true (default): only check and preview; false: create the automation"`
 }
 
 const scopeWrite, scopeAutomations = "hydronode:write", "hydronode:automations"
 
 func registerWrite(s *mcp.Server, d Deps) {
 	add(s, d, &mcp.Tool{Name: "set_value", Annotations: rw("Set a value", true, false),
-		Description: "Switch or set a writable data point (relay, setpoint, mode). The device gets it on its next contact; wait_seconds waits for confirmation. Ask the user first."},
+		Description: "Switch or set a writable data point (relay, setpoint, mode). The device gets it on its next contact; wait_seconds waits for its confirmation."},
 		func(in setValueIn) (apiCall, error) {
 			pid, err := id("point_id", in.PointID)
 			if err != nil {
@@ -78,7 +78,7 @@ func registerWrite(s *mcp.Server, d Deps) {
 		})
 
 	add(s, d, &mcp.Tool{Name: "send_command", Annotations: rw("Send a command", true, false),
-		Description: "Queue a typed command for a device; it is delivered on the device's next contact. Ask the user first."},
+		Description: "Queue a typed command for a device; it is delivered on the device's next contact."},
 		func(in commandIn) (apiCall, error) {
 			sid, err := id("sensor_id", in.SensorID)
 			if err != nil {
@@ -163,7 +163,7 @@ func registerWrite(s *mcp.Server, d Deps) {
 		})
 
 	add(s, d, &mcp.Tool{Name: "create_automation", Annotations: rw("Create an automation", true, false),
-		Description: "Check and preview a new automation (dry_run, default), then create it with dry_run false once the user agreed. Only notifications, notification channels, data point writes and command templates; no webhooks."},
+		Description: "Check and preview a new automation (dry_run, the default) or create it (dry_run false). Actions: notifications, notification channels, data point writes and command templates; no webhooks."},
 		func(in createIn) (apiCall, error) {
 			if in.Definition == nil {
 				return apiCall{}, userErr("definition is required.")

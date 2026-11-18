@@ -17,7 +17,7 @@ type findIn struct {
 }
 
 type sensorIn struct {
-	SensorID string `json:"sensor_id" jsonschema:"sensor id from overview or find"`
+	SensorID string `json:"sensor_id" jsonschema:"sensor id"`
 }
 
 type rangeIn struct {
@@ -26,7 +26,7 @@ type rangeIn struct {
 }
 
 type summaryIn struct {
-	PointID string `json:"point_id" jsonschema:"data point id from get_sensor or find"`
+	PointID string `json:"point_id" jsonschema:"data point id"`
 	rangeIn
 }
 
@@ -50,7 +50,7 @@ type anomaliesIn struct {
 }
 
 type anomalyIn struct {
-	AnomalyID string `json:"anomaly_id" jsonschema:"anomaly id from list_anomalies"`
+	AnomalyID string `json:"anomaly_id" jsonschema:"anomaly id"`
 }
 
 type messagesIn struct {
@@ -76,7 +76,7 @@ type automationsIn struct {
 
 func registerRead(s *mcp.Server, d Deps) {
 	add(s, d, &mcp.Tool{Name: "overview", Annotations: ro("Overview"),
-		Description: "Start here. Projects with pools, device counts by status, open anomalies, unread messages and up to 10 things that need attention."},
+		Description: "Projects with pools, device counts by status, open anomalies, unread messages and up to 10 things that need attention."},
 		func(noArgs) (apiCall, error) { return apiCall{method: http.MethodGet, path: api + "overview"}, nil },
 		func(m map[string]any) string {
 			parts := []string{plural(n(get(m, "devices", "total")), "device", "devices")}
@@ -95,7 +95,7 @@ func registerRead(s *mcp.Server, d Deps) {
 		})
 
 	add(s, d, &mcp.Tool{Name: "find", Annotations: ro("Find"),
-		Description: "Find sensors, data points, stations and projects by name, id or DevEUI. Returns up to 5 per group with ids for the other tools."},
+		Description: "Find sensors, data points, stations and projects by name, id or DevEUI. Returns up to 5 per group with their ids."},
 		func(in findIn) (apiCall, error) {
 			q := strings.TrimSpace(in.Query)
 			if q == "" || len(q) > 100 {
@@ -127,7 +127,7 @@ func registerRead(s *mcp.Server, d Deps) {
 		})
 
 	add(s, d, &mcp.Tool{Name: "summarize_history", Annotations: ro("History summary"),
-		Description: "History of one data point as min and max with time, average, trend per day, gaps, coverage and at most 48 buckets. Use this for any question about the past."},
+		Description: "History of one data point over a time range: min and max with time, average, trend per day, gaps, coverage and at most 48 buckets."},
 		func(in summaryIn) (apiCall, error) {
 			pid, err := id("point_id", in.PointID)
 			if err != nil {
@@ -261,7 +261,7 @@ func registerRead(s *mcp.Server, d Deps) {
 		})
 
 	add(s, d, &mcp.Tool{Name: "console", Annotations: ro("Console"),
-		Description: "Latest requests HydroNode received from devices (up to 50), with the reason when one was rejected. Good for 'why is X not sending'."},
+		Description: "Latest requests HydroNode received from devices (up to 50), with the reason when one was rejected."},
 		func(in consoleIn) (apiCall, error) {
 			if in.Limit < 0 || in.Limit > 50 {
 				return apiCall{}, userErr("limit must be 1 to 50.")
@@ -305,7 +305,7 @@ func registerRead(s *mcp.Server, d Deps) {
 		listSummary("stations"))
 
 	add(s, d, &mcp.Tool{Name: "list_automations", Annotations: ro("Automations"),
-		Description: "Automations with trigger, actions, on/off and when they last fired. Pass automation_id for one with its recent runs."},
+		Description: "Automations with trigger, actions, on/off and when they last fired; with automation_id one automation and its recent runs."},
 		func(in automationsIn) (apiCall, error) {
 			if in.AutomationID == "" {
 				return apiCall{method: http.MethodGet, path: api + "automations"}, nil

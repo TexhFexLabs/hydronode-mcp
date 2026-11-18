@@ -120,6 +120,25 @@ func TestListToolsAndAnnotations(t *testing.T) {
 			t.Errorf("%s: want idempotentHint", name)
 		}
 	}
+	// Directory policy: descriptions say what a tool does, never how the model should behave or which
+	// other tool to call. Behaviour lives in the server instructions.
+	for name, tl := range got {
+		raw, _ := json.Marshal(tl)
+		text := strings.ToLower(string(raw))
+		for _, bad := range []string{"ask the user", "start here", "use this", "good for", "once the user"} {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s: description contains %q", name, bad)
+			}
+		}
+		schema, _ := json.Marshal(tl.InputSchema)
+		words := tl.Description + " " + string(schema)
+		for _, other := range tools.Names {
+			// Only names with an underscore: "find" or "compare" are also plain words.
+			if other != name && strings.Contains(other, "_") && strings.Contains(words, other) {
+				t.Errorf("%s: mentions the tool %s", name, other)
+			}
+		}
+	}
 	// The Claude directory requires a type on every parameter (2026-11-18 submission).
 	for name, tl := range got {
 		raw, _ := json.Marshal(tl.InputSchema)

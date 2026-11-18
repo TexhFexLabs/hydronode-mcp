@@ -120,6 +120,19 @@ func TestListToolsAndAnnotations(t *testing.T) {
 			t.Errorf("%s: want idempotentHint", name)
 		}
 	}
+	// The Claude directory requires a type on every parameter (2026-11-18 submission).
+	for name, tl := range got {
+		raw, _ := json.Marshal(tl.InputSchema)
+		var schema struct {
+			Properties map[string]map[string]any `json:"properties"`
+		}
+		_ = json.Unmarshal(raw, &schema)
+		for prop, def := range schema.Properties {
+			if def["type"] == nil {
+				t.Errorf("%s.%s: parameter without a type", name, prop)
+			}
+		}
+	}
 	for name, tl := range got {
 		if len(tl.Description) < 20 {
 			t.Errorf("%s: description too short", name)

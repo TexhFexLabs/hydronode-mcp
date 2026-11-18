@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/jsonschema-go/jsonschema"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -134,6 +135,9 @@ func ptr[T any](v T) *T { return &v }
 
 // add registers a tool whose handler builds one backend call.
 func add[In any](s *mcp.Server, d Deps, t *mcp.Tool, build func(In) (apiCall, error), summary func(map[string]any) string) {
+	if t.InputSchema == nil {
+		t.InputSchema = typedSchema[In]()
+	}
 	mcp.AddTool(s, t, func(ctx context.Context, req *mcp.CallToolRequest, in In) (*mcp.CallToolResult, map[string]any, error) {
 		start := time.Now()
 		p, st := fromRequest(req)
@@ -329,4 +333,19 @@ func userErr(format string, a ...any) error {
 		return userError(format)
 	}
 	return userError(fmt.Sprintf(format, a...))
+}
+
+// typedSchema is the inferred input schema, with every untyped parameter (Go `any`: a switch,
+// number or option text) declared as boolean, number or string. Directories require a type.
+func typedSchema[In any]() *jsonschema.Schema {
+	schema, err := jsonschema.For[In](nil)
+	if err != nil {
+		panic(err) // fixed Go types; fails in tests, never at runtime
+	}
+	for _, prop := range schema.Properties {
+		if prop.Type == "" && len(prop.Types) == 0 {
+			prop.Types = []string{"boolean", "number", "string"}
+		}
+	}
+	return schema
 }

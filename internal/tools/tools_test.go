@@ -237,9 +237,9 @@ func TestWriteTools(t *testing.T) {
 		query  string
 		body   string
 	}{
-		{"set_value", map[string]any{"point_id": "p1", "value": true, "wait_seconds": 10}, "POST", "/api/agent/v1/points/p1/value", "", `{"value":true,"waitSeconds":10}`},
+		{"set_value", map[string]any{"point_id": "p1", "value": "true", "wait_seconds": 10}, "POST", "/api/agent/v1/points/p1/value", "", `{"value":true,"waitSeconds":10}`},
 		{"send_command", map[string]any{"sensor_id": "s1", "name": "relay1", "type": "BOOL", "value": "true"}, "POST", "/api/agent/v1/sensors/s1/commands", "", `{"name":"relay1","type":"BOOL","value":"true"}`},
-		{"log_value", map[string]any{"point_id": "p2", "value": 6.8}, "POST", "/api/agent/v1/points/p2/manual", "", `{"value":6.8}`},
+		{"log_value", map[string]any{"point_id": "p2", "value": "6.8"}, "POST", "/api/agent/v1/points/p2/manual", "", `{"value":6.8}`},
 		{"mark_messages", map[string]any{"all": true, "action": "read"}, "POST", "/api/agent/v1/messages/read-all", "", ""},
 		{"mark_messages", map[string]any{"message_ids": []string{"m1"}, "action": "archive"}, "POST", "/api/agent/v1/messages/m1/archive", "", ""},
 		{"toggle_automation", map[string]any{"automation_id": "a1", "enabled": false}, "PUT", "/api/agent/v1/automations/a1/enabled", "", `{"enabled":false}`},
@@ -262,7 +262,7 @@ func TestWriteTools(t *testing.T) {
 func TestWaitSecondsClamped(t *testing.T) {
 	e := newEnv(t)
 	s := e.session(t, "hoa_write")
-	call(t, s, "set_value", map[string]any{"point_id": "p1", "value": 1, "wait_seconds": 60})
+	call(t, s, "set_value", map[string]any{"point_id": "p1", "value": "1", "wait_seconds": 60})
 	if got := lastCall(t, e.be).Body; got != `{"value":1,"waitSeconds":20}` {
 		t.Errorf("body %s", got)
 	}
@@ -326,7 +326,7 @@ func rawCall(t *testing.T, url, tok, tool string, args map[string]any) rpcResult
 // Missing scope: the tool explains it and the HTTP answer carries the step-up challenge.
 func TestWriteWithoutScopeStepUp(t *testing.T) {
 	e := newEnv(t)
-	r := rawCall(t, e.url, "hoa_read", "set_value", map[string]any{"point_id": "p1", "value": true})
+	r := rawCall(t, e.url, "hoa_read", "set_value", map[string]any{"point_id": "p1", "value": "true"})
 	if r.status != 403 {
 		t.Errorf("status %d", r.status)
 	}
@@ -353,8 +353,17 @@ func TestStepUpHTTPOff(t *testing.T) {
 	cfg := config.Config{BackendURL: be.URL, PublicURL: "https://int.example.com", AuthServer: "https://int.example.com", RatePerMin: 1000, StepUpHTTP: false}
 	srv := httptest.NewServer(server.New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), "test"))
 	t.Cleanup(srv.Close)
-	r := rawCall(t, srv.URL, "hoa_read", "set_value", map[string]any{"point_id": "p1", "value": true})
+	r := rawCall(t, srv.URL, "hoa_read", "set_value", map[string]any{"point_id": "p1", "value": "true"})
 	if r.status != 200 || r.header != "" || !r.isErr || !strings.Contains(r.text, "Write access is not granted") {
 		t.Errorf("got %+v", r)
+	}
+}
+
+func TestTypedValue(t *testing.T) {
+	cases := map[string]any{"true": true, "On": true, "false": false, "off": false, "21.5": 21.5, "1": 1.0, " Eco ": "Eco", "NaN": "NaN"}
+	for in, want := range cases {
+		if got := tools.TypedValueForTest(in); got != want {
+			t.Errorf("%q: got %v (%T), want %v", in, got, got, want)
+		}
 	}
 }

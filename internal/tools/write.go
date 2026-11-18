@@ -2,14 +2,17 @@ package tools
 
 import (
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type setValueIn struct {
 	PointID     string `json:"point_id" jsonschema:"writable data point id (get_sensor shows writable: true)"`
-	Value       any    `json:"value" jsonschema:"new value: true/false for switches, a number, or an option text"`
+	Value       string `json:"value" jsonschema:"new value as text: true or false (also on/off) for switches, a number like 21.5, or an option text"`
 	WaitSeconds int    `json:"wait_seconds,omitempty" jsonschema:"wait up to this many seconds (max 20) for the device to confirm"`
 }
 
@@ -22,7 +25,7 @@ type commandIn struct {
 
 type logValueIn struct {
 	PointID string `json:"point_id" jsonschema:"manual data point id (get_sensor shows manual: true)"`
-	Value   any    `json:"value" jsonschema:"measured value, e.g. 6.8"`
+	Value   string `json:"value" jsonschema:"measured value as text, e.g. 6.8 (true/false or an option text for switch or choice points)"`
 	At      string `json:"at,omitempty" jsonschema:"when it was measured: ISO time (default now)"`
 }
 
@@ -52,11 +55,11 @@ func registerWrite(s *mcp.Server, d Deps) {
 			if err != nil {
 				return apiCall{}, err
 			}
-			if in.Value == nil {
+			if strings.TrimSpace(in.Value) == "" {
 				return apiCall{}, userErr("value is required.")
 			}
 			w := min(max(in.WaitSeconds, 0), 20)
-			body := map[string]any{"value": in.Value}
+			body := map[string]any{"value": typedValue(in.Value)}
 			if w > 0 {
 				body["waitSeconds"] = w
 			}
@@ -101,10 +104,10 @@ func registerWrite(s *mcp.Server, d Deps) {
 			if err != nil {
 				return apiCall{}, err
 			}
-			if in.Value == nil {
+			if strings.TrimSpace(in.Value) == "" {
 				return apiCall{}, userErr("value is required.")
 			}
-			body := map[string]any{"value": in.Value}
+			body := map[string]any{"value": typedValue(in.Value)}
 			if in.At != "" {
 				if _, err := timeArg("at", in.At); err != nil {
 					return apiCall{}, err
@@ -190,4 +193,21 @@ func reason(m map[string]any) string {
 		return " Reason: " + r + "."
 	}
 	return ""
+}
+
+// typedValue turns the text a client sends into what the Agent API expects: a switch state, a
+// number, or the option text. Directories want one declared type per parameter, so the tools take
+// text and convert here.
+func typedValue(raw string) any {
+	v := strings.TrimSpace(raw)
+	switch strings.ToLower(v) {
+	case "true", "on":
+		return true
+	case "false", "off":
+		return false
+	}
+	if n, err := strconv.ParseFloat(v, 64); err == nil && !math.IsInf(n, 0) && !math.IsNaN(n) {
+		return n
+	}
+	return v
 }

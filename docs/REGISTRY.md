@@ -1,0 +1,24 @@
+# Listing in the MCP Registry (prepared, not published)
+
+`server.json` describes the hosted server for <https://registry.modelcontextprotocol.io>. Publish only after the
+Prod rollout (TD 1.84.5) when `https://hydronode.tech/mcp` answers.
+
+Before publishing, check the current `$schema` URL and field names in the registry docs; they change between
+schema versions.
+
+## Namespace
+
+- `tech.hydronode/hydronode` (chosen): proves ownership of `hydronode.tech` via a DNS TXT record.
+  `mcp-publisher login dns --domain hydronode.tech --private-key <ed25519 key>` prints the TXT value; set it in
+  Cloudflare once, keep the private key offline.
+- Alternative `io.github.texhfexlabs/hydronode`: `mcp-publisher login github` by an org member. No DNS change.
+
+## Publish
+
+```bash
+mcp-publisher validate
+mcp-publisher publish
+```
+
+Bump `version` in `server.json` for every listing change. Clients and directories (VS Code, Smithery, Glama,
+PulseMCP) read the registry. Claude's Connectors Directory has its own submission: `docs/CLAUDE_DIRECTORY.md`.

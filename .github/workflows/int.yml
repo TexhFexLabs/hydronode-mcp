@@ -1,0 +1,75 @@
+name: Int image
+
+# A push to branch `int` builds the image the HydroNode int environment runs:
+# ghcr.io/<owner>/hydronode-mcp:int (and :int-<sha>). The int host pulls :int at every start
+# (`int up`, `int rebuild`, a push to `int` in the backend repo).
+#
+# Nothing here reaches prod: the tag is never `latest` and the image is not signed, and the
+# prod hosts only run images signed by release.yml on `main`.
+# Setup of int: hydronode (backend repo), tools/deployment/int/README.md
+
+on:
+  push:
+    branches: [int]
+  workflow_dispatch:
+
+concurrency:
+  group: int-image
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: vet
+        run: go vet ./...
+      - name: test
+        run: go test -race ./...
+
+  image:
+    needs: test
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Image name
+        id: name
+        run: echo "repo=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/hydronode-mcp" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # amd64 only: the int host is amd64. Tags int and int-<sha>, never `latest`.
+      - name: Build & push image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.name.outputs.repo }}:int
+            ${{ steps.name.outputs.repo }}:int-${{ github.sha }}
+          build-args: |
+            VERSION=int-${{ github.sha }}
+            REVISION=${{ github.sha }}
+          labels: |
+            de.texhfexlabs.hydronode.environment=int

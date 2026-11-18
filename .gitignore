@@ -1,0 +1,6 @@
+/hnmcp
+/bin/
+/dist/
+*.test
+*.out
+.DS_Store

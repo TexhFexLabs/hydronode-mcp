@@ -143,6 +143,9 @@ npx @modelcontextprotocol/inspector   # connect to http://localhost:8091/mcp
 | `int` | `int.yml` | `ghcr.io/texhfexlabs/hydronode-mcp:int`, `:int-<sha>` (amd64) |
 | `main` (push or manual, only from `main`) | `release.yml` | `:latest`, `:0.1.<run>`, amd64+arm64, cosign keyless; prod timer `hnmcp-autodeploy` swaps it |
 
+Listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `tech.hydronode/hydronode` (`server.json`,
+`docs/REGISTRY.md`). Claude Connectors Directory texts: `docs/CLAUDE_DIRECTORY.md`.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).

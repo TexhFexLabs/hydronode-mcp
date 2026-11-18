@@ -1,7 +1,7 @@
-# Listing in the MCP Registry (prepared, not published)
+# Listing in the MCP Registry
 
-`server.json` describes the hosted server for <https://registry.modelcontextprotocol.io>. Publish only after the
-Prod rollout (TD 1.84.5) when `https://hydronode.tech/mcp` answers.
+`server.json` describes the hosted server for <https://registry.modelcontextprotocol.io>. Published as
+`tech.hydronode/hydronode` 0.1.0 on 2026-11-18.
 
 Before publishing, check the current `$schema` URL and field names in the registry docs; they change between
 schema versions.
@@ -15,8 +15,13 @@ schema versions.
 
 ## Publish
 
+The Ed25519 key lives in the maintainer's macOS login keychain (service `hydronode-mcp-registry-ed25519`,
+account `hydronode.tech`); the TXT record on `hydronode.tech` holds its public half.
+
 ```bash
 mcp-publisher validate
+mcp-publisher login dns -domain hydronode.tech \
+  -private-key "$(security find-generic-password -s hydronode-mcp-registry-ed25519 -a hydronode.tech -w)"
 mcp-publisher publish
 ```
 

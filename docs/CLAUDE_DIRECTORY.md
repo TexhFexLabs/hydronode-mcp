@@ -49,8 +49,16 @@ Prompts: `daily_report`, `why_offline`, `do_i_need_to_water`, `compare_weeks`.
 4. "Turn the pump on." (with write access) → asks, then `set_value`
 5. "Mark my messages as read." → `mark_messages`
 
-## Review account (Felix)
+## Review account
 
-Anthropic needs a working account with data. Create `review@hydronode.tech` (or similar) on Prod with a demo
-project: a few virtual sensors with history, one writable switch, one automation. Give the reviewers that login,
-never a personal one. Delete or reset it after the review.
+The App Review demo account (same as for the iOS App Review; credentials only in App Store Connect,
+"App Review Information"). Email and password, no MFA. Contents (2026-11-18):
+
+- Project "My project" with 5 live sensors and at least 7 days of history: Greenhouse, Living Room Air,
+  Solar Battery, Water Tank, Rooftop Weather.
+- "Irrigation pump" on Greenhouse: writable switch (`set_value`).
+- "Hand measurements" with "Nutrient pH": manual data point (`log_value`).
+- Automation "Greenhouse too hot" (off, so `toggle_automation` can be tried).
+- Unread messages in the inbox (`list_messages`, `mark_messages`).
+
+Reset after the review if reviewers changed things.

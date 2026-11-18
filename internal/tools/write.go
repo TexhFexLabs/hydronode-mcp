@@ -38,7 +38,7 @@ type toggleIn struct {
 }
 
 type createIn struct {
-	Definition map[string]any `json:"definition" jsonschema:"automation as for POST /api/automations/v1: name, sensorId or triggerType, conditions (measurementType or dataPointId, comparison ABOVE/BELOW/IS_ON/EQUALS/CHANGED, threshold, hysteresis), match ALL/ANY, holdSeconds, schedule, actions (NOTIFICATION, NOTIFY_CHANNEL with channelId, WRITE_DATA_POINT with dataPointId and value, COMMAND_TEMPLATE). WEBHOOK is not allowed."`
+	Definition map[string]any `json:"definition" jsonschema:"automation as for POST /api/automations/v1: name, triggerType (THRESHOLD on readings, ANOMALY, OFFLINE; required), sensorId, conditions (measurementType or dataPointId, comparison ABOVE/BELOW/IS_ON/EQUALS/CHANGED, threshold, hysteresis), match ALL/ANY, holdSeconds, schedule, actions (NOTIFICATION, NOTIFY_CHANNEL with channelId, WRITE_DATA_POINT with dataPointId and value, COMMAND_TEMPLATE). WEBHOOK is not allowed."`
 	DryRun     *bool          `json:"dry_run,omitempty" jsonschema:"default true: only check and preview. Set false to create after the user agreed."`
 }
 

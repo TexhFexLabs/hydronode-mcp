@@ -4,10 +4,12 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -42,6 +44,7 @@ type ctxKey int
 const (
 	keyPrincipal ctxKey = iota
 	keyStepUp
+	keyRPC
 )
 
 // New builds the handler. version shows up in the MCP server info.
@@ -184,6 +187,18 @@ func (h *handler) mcp(next http.Handler) http.Handler {
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+		// Read the (small, capped) body once to log what was asked: JSON-RPC method, tool name,
+		// client. Never arguments. Without this a hanging call shows up only as "POST /mcp 503".
+		if r.Method == http.MethodPost {
+			buf, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+				h.access(r, http.StatusRequestEntityTooLarge, start, "")
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(buf))
+			r = r.WithContext(context.WithValue(r.Context(), keyRPC, describe(buf)))
+		}
 
 		authz := r.Header.Get("Authorization")
 		ip := clientIP(r)
@@ -225,7 +240,80 @@ func (h *handler) mcp(next http.Handler) http.Handler {
 }
 
 func (h *handler) access(r *http.Request, status int, start time.Time, grant string) {
-	h.log.Info("request", "method", r.Method, "path", r.URL.Path, "status", status, "ms", time.Since(start).Milliseconds(), "grant", grant)
+	attrs := []any{"method", r.Method, "path", r.URL.Path, "status", status, "ms", time.Since(start).Milliseconds(), "grant", grant}
+	if info, ok := r.Context().Value(keyRPC).(rpcInfo); ok {
+		attrs = append(attrs, "rpc", info.Method)
+		if info.Tool != "" {
+			attrs = append(attrs, "tool", info.Tool)
+		}
+		if info.Client != "" {
+			attrs = append(attrs, "client", info.Client)
+		}
+	}
+	if c := safe(r.Header.Get("CF-IPCountry"), 2); c != "" {
+		attrs = append(attrs, "country", c)
+	}
+	if ua := safe(r.Header.Get("User-Agent"), 60); ua != "" {
+		attrs = append(attrs, "ua", ua)
+	}
+	h.log.Info("request", attrs...)
+}
+
+// rpcInfo is what a request asked for, for the access log only. Arguments are never kept.
+type rpcInfo struct {
+	Method string // JSON-RPC method, "batch" for an array, "response" for a client answer, "?" if unreadable
+	Tool   string // params.name of tools/call and prompts/get
+	Client string // clientInfo name/version of initialize
+}
+
+func describe(body []byte) rpcInfo {
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		return rpcInfo{Method: "batch"}
+	}
+	var msg struct {
+		Method string          `json:"method"`
+		ID     json.RawMessage `json:"id"`
+		Params struct {
+			Name       string `json:"name"`
+			ClientInfo struct {
+				Name    string `json:"name"`
+				Version string `json:"version"`
+			} `json:"clientInfo"`
+		} `json:"params"`
+	}
+	if json.Unmarshal(trimmed, &msg) != nil {
+		return rpcInfo{Method: "?"}
+	}
+	info := rpcInfo{Method: safe(msg.Method, 48)}
+	if info.Method == "" {
+		if len(msg.ID) > 0 {
+			info.Method = "response"
+		} else {
+			info.Method = "?"
+		}
+	}
+	switch msg.Method {
+	case "tools/call", "prompts/get":
+		info.Tool = safe(msg.Params.Name, 48)
+	case "initialize":
+		info.Client = safe(strings.TrimSpace(msg.Params.ClientInfo.Name+" "+msg.Params.ClientInfo.Version), 60)
+	}
+	return info
+}
+
+// safe keeps printable ASCII and cuts to max: values come from the client.
+func safe(v string, max int) string {
+	var b strings.Builder
+	for _, c := range v {
+		if b.Len() >= max {
+			break
+		}
+		if c >= 0x20 && c < 0x7f {
+			b.WriteRune(c)
+		}
+	}
+	return b.String()
 }
 
 // stepUpWriter turns a 200 into 403 + insufficient_scope when a tool reported a missing scope.

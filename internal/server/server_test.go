@@ -261,3 +261,60 @@ func TestLogsNeverContainTokens(t *testing.T) {
 		t.Errorf("tool call not logged: %s", logs.String())
 	}
 }
+
+func TestAccessLogNamesMethodToolAndClientButNoArguments(t *testing.T) {
+	_, srv, logs := setup(t, nil)
+	post(t, srv.URL, "hoa_read", "https://claude.ai", initBody)
+	resp := post(t, srv.URL, "hoa_read", "https://claude.ai",
+		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"find","arguments":{"query":"secret-greenhouse-name"}}}`)
+	io.Copy(io.Discard, resp.Body)
+
+	type line struct {
+		Msg    string `json:"msg"`
+		RPC    string `json:"rpc"`
+		Tool   string `json:"tool"`
+		Client string `json:"client"`
+	}
+	var rpcs, tools, clients []string
+	for _, l := range strings.Split(strings.TrimSpace(logs.String()), "\n") {
+		var e line
+		if json.Unmarshal([]byte(l), &e) != nil {
+			continue
+		}
+		if e.Msg == "request" {
+			rpcs = append(rpcs, e.RPC)
+			if e.Client != "" {
+				clients = append(clients, e.Client)
+			}
+		}
+		if e.Msg == "tool start" {
+			tools = append(tools, e.Tool)
+		}
+	}
+	if fmt.Sprint(rpcs) != "[initialize tools/call]" {
+		t.Errorf("rpc fields %v", rpcs)
+	}
+	if fmt.Sprint(clients) != "[t 1]" {
+		t.Errorf("client fields %v", clients)
+	}
+	if fmt.Sprint(tools) != "[find]" {
+		t.Errorf("tool start lines %v", tools)
+	}
+	if strings.Contains(logs.String(), "secret-greenhouse-name") {
+		t.Error("tool arguments must never reach the log")
+	}
+}
+
+func TestDescribeUntrustedBodies(t *testing.T) {
+	cases := map[string]rpcInfo{
+		`[{"jsonrpc":"2.0","id":1,"method":"ping"}]`: {Method: "batch"},
+		`{"jsonrpc":"2.0","id":3,"result":{}}`:       {Method: "response"},
+		`not json`:                                   {Method: "?"},
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"a\nb"}}`: {Method: "tools/call", Tool: "ab"},
+	}
+	for body, want := range cases {
+		if got := describe([]byte(body)); got != want {
+			t.Errorf("%s: got %+v want %+v", body, got, want)
+		}
+	}
+}

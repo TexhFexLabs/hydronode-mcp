@@ -142,6 +142,11 @@ func add[In any](s *mcp.Server, d Deps, t *mcp.Tool, build func(In) (apiCall, er
 		start := time.Now()
 		p, st := fromRequest(req)
 		status := "ok"
+		if p != nil {
+			// Shows the handler was reached; a request that times out without this line hangs
+			// before the tool (SDK, transport), with it in the backend call.
+			d.Log.Info("tool start", "tool", t.Name, "grant", p.Hash)
+		}
 		defer func() {
 			hash := ""
 			if p != nil {

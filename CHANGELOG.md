@@ -8,6 +8,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Access log names the JSON-RPC method, tool or prompt, `initialize` client, Cloudflare country and a
+  short user agent; a `tool start` line marks that a tool handler ran. Arguments are never logged.
 - Stateless Streamable HTTP MCP server (`POST /mcp`) and RFC 9728 Protected Resource Metadata
   (`GET /.well-known/oauth-protected-resource/mcp`).
 - 19 MCP tools across read (`overview`, `find`, `get_sensor`, `summarize_history`, `find_periods`,

@@ -119,6 +119,9 @@ Prompts: `daily_report`, `why_offline`, `do_i_need_to_water`, `compare_weeks`.
 - Origin allowlist, 64 KiB body limit, 20 s per request, per-token rate limit, at most 300 rejected tokens per
   minute and address (above that only already verified tokens pass).
 - Logs carry tool name, status, duration and a 12-character token hash. Never tokens, arguments or answers.
+  Each request line also names the JSON-RPC method (`rpc`), the tool or prompt (`tool`), the client of an
+  `initialize` (`client`), the Cloudflare country and a short user agent; `tool start` marks that a tool
+  handler was reached, so a call that times out shows where it hung.
 - distroless nonroot image, read-only filesystem, no capabilities.
 
 ## Develop

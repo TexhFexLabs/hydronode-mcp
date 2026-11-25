@@ -29,11 +29,11 @@ them switch outputs, send commands, tick off messages or draft automations with 
 |---|---|
 | **Cursor** | [Add to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=hydronode&config=eyJ1cmwiOiJodHRwczovL2h5ZHJvbm9kZS50ZWNoL21jcCJ9) or add `{"mcpServers":{"hydronode":{"url":"https://hydronode.tech/mcp"}}}` to `.cursor/mcp.json` |
 | **VS Code** | [Install in VS Code](vscode:mcp/install?%7B%22name%22%3A%22hydronode%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fhydronode.tech%2Fmcp%22%7D) or add `{"servers":{"hydronode":{"type":"http","url":"https://hydronode.tech/mcp"}}}` to `.vscode/mcp.json` |
-| **Claude.ai / Claude Desktop** | Settings → Connectors → Add custom connector → `https://hydronode.tech/mcp` |
+| **Claude.ai / Claude Desktop** | [HydroNode in the Claude directory](https://claude.ai/directory/hydronode) → Connect, or Settings → Connectors → Add custom connector → `https://hydronode.tech/mcp` |
 | **Claude Code** | `claude mcp add --transport http hydronode https://hydronode.tech/mcp` |
 | **ChatGPT** | Settings → Connectors → Add MCP connector → `https://hydronode.tech/mcp` |
 | **Codex** | Add `[mcp_servers.hydronode]` with `url = "https://hydronode.tech/mcp"` to `~/.codex/config.toml` |
-| **Claude plugin** (connector + skills) | `claude plugin marketplace add TexhFexLabs/hydronode-skills`, then `claude plugin install hydronode@hydronode` |
+| **Claude plugin** (connector + skills) | [plugin directory](https://claude.ai/customize/plugins/id/45554ad1-f203-4d6e-81dd-a346b5b75805%40anthropic-plugin-directory), or in Claude Code `claude plugin marketplace add TexhFexLabs/hydronode-skills`, then `claude plugin install hydronode@hydronode` |
 | **Clients without remote MCP** | run the bridge `npx -y mcp-remote https://hydronode.tech/mcp` as a local stdio server (needs Node.js) |
 
 On first use your browser opens HydroNode's OAuth 2.1 consent page so you can choose which projects

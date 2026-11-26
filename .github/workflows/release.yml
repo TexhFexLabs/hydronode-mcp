@@ -9,6 +9,7 @@ on:
       - 'docs/**'
       - '**/*.md'
       - 'tools/e2e/**'
+      - 'tools/oauthprobe/**'
   workflow_dispatch:
 
 concurrency:

@@ -138,6 +138,17 @@ HNMCP_ALLOWED_ORIGINS=http://localhost:6274 go run ./cmd/hnmcp
 npx @modelcontextprotocol/inspector   # connect to http://localhost:8091/mcp
 ```
 
+**OAuth probe** (`tools/oauthprobe`, standard library only): connects like a third-party MCP client (dynamic
+registration, PKCE in the browser, token, `initialize`, `tools/list`) and prints the step where a client gets stuck.
+It appears as "Unverified app"; revoke its grant under Account › Sessions & security › Connected apps afterwards.
+
+```bash
+go run ./tools/oauthprobe -call overview                            # like Claude (sends resource)
+go run ./tools/oauthprobe -no-resource                              # client without RFC 8707 resource
+go run ./tools/oauthprobe -resource https://evil.example/mcp        # foreign resource: invalid_target
+go run ./tools/oauthprobe -token-resource https://evil.example/mcp  # foreign resource at token: no token
+```
+
 ## Release
 
 | Branch | Workflow | Image |
